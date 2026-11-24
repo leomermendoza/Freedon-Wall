@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freedom Wall</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,sans-serif;background:#f0f2f5;color:#1c1e21}
+header{background:#1877f2;color:#fff;text-align:center;padding:24px 16px}
+header h1{margin:0 0 6px}header p{margin:0;opacity:.9}
+main{max-width:620px;margin:20px auto;padding:0 12px}
+.card{background:#fff;border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+textarea{width:100%;padding:10px;margin-bottom:10px;border:1px solid #ccd0d5;border-radius:8px;font:inherit;resize:vertical}
+.hp{position:absolute;left:-9999px}
+.file{display:inline-block;padding:8px 12px;background:#e4e6eb;border-radius:8px;cursor:pointer;margin-bottom:10px}
+.file input{display:none}
+#preview{display:none;max-width:100%;border-radius:8px;margin-bottom:10px}
+button{width:100%;padding:12px;background:#1877f2;color:#fff;border:0;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.meta{font-size:13px;color:#65676b;margin-bottom:8px}
+article p{margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+article img{max-width:100%;border-radius:8px}
+#msg{display:none;padding:12px;border-radius:8px;margin-bottom:16px}
+.ok{background:#d4edda;color:#155724}.err{background:#f8d7da;color:#721c24}
+.empty{text-align:center;color:#65676b}
+</style>
+</head>
+<body>
+<header><h1>🗣️ Freedom Wall</h1><p>100% anonymous. Automatic itong lalabas sa Facebook Page!</p></header>
+<main>
+  <div id="msg"></div>
+  <form id="f" class="card">
+    <textarea name="message" maxlength="1000" rows="4" placeholder="Ano'ng gusto mong i-share?"></textarea>
+    <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off">
+    <label class="file">📷 Mag-attach ng picture <input type="file" name="image" accept="image/*" id="img"></label>
+    <img id="preview" alt="">
+    <button id="btn" type="submit">Post to Freedom Wall</button>
+  </form>
+  <section id="wall"><p class="empty">Naglo-load...</p></section>
+</main>
+<script>
+const API_URL = 'https://PALITAN.workers.dev'; // URL ng Cloudflare Worker mo (walang / sa dulo)
+const $ = id => document.getElementById(id);
+
+function show(text, ok) { const m = $('msg'); m.textContent = text; m.className = ok ? 'ok' : 'err'; m.style.display = 'block'; }
+
+$('img').addEventListener('change', e => {
+  const f = e.target.files[0], p = $('preview');
+  if (f) { p.src = URL.createObjectURL(f); p.style.display = 'block'; } else p.style.display = 'none';
+});
+
+async function loadWall() {
+  try {
+    const posts = await (await fetch(API_URL + '/posts')).json();
+    const wall = $('wall'); wall.innerHTML = '';
+    if (!posts.length) { wall.innerHTML = '<p class="empty">Wala pang post. Ikaw na ang mauna!</p>'; return; }
+    for (const p of posts) {
+      const a = document.createElement('article'); a.className = 'card';
+      const m = document.createElement('div'); m.className = 'meta';
+      m.textContent = new Date(p.time).toLocaleString('fil-PH', { dateStyle: 'medium', timeStyle: 'short' });
+      a.appendChild(m);
+      if (p.message) { const t = document.createElement('p'); t.textContent = p.message; a.appendChild(t); }
+      if (p.image) { const i = document.createElement('img'); i.src = p.image; i.loading = 'lazy'; a.appendChild(i); }
+      wall.appendChild(a);
+    }
+  } catch { $('wall').innerHTML = '<p class="empty">Hindi ma-load ang wall ngayon.</p>'; }
+}
+
+$('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = $('btn'); btn.disabled = true; btn.textContent = 'Nagpo-post...';
+  try {
+    const r = await fetch(API_URL + '/post', { method: 'POST', body: new FormData(e.target) });
+    const d = await r.json();
+    if (r.ok) { show('Na-post na sa Facebook Page! 🎉', true); e.target.reset(); $('preview').style.display = 'none'; setTimeout(loadWall, 3000); }
+    else show(d.error || 'May error. Subukan ulit.', false);
+  } catch { show('Walang connection. Subukan ulit.', false); }
+  btn.disabled = false; btn.textContent = 'Post to Freedom Wall';
+});
+
+loadWall(); setInterval(loadWall, 60000);
+</script>
+</body>
+</html>

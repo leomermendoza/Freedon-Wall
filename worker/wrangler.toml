@@ -1,0 +1,11 @@
+name = "freedom-wall"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+[[kv_namespaces]]
+binding = "RATE"
+id = "PALITAN_KV_ID"
+
+[vars]
+ALLOWED_ORIGIN = "https://USERNAME.github.io"
+# Secrets (huwag ilagay dito): wrangler secret put FB_PAGE_ID / FB_PAGE_TOKEN / SALT
